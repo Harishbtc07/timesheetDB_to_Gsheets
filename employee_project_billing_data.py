@@ -12,23 +12,31 @@ def connect():
                                    database="timesheet"
                                    )
     query = "SELECT project_details.project_name AS " \
-            "Project_name,CONCAT(IFNULL(user_details.first_name, ''), ' ', " \
-            "IFNULL(user_details.last_name, '')) AS Employee_name,IFNULL(project_details.budget, '') " \
-            "AS budget,IFNULL(project_details.total_hours, '') AS total_hours,IFNULL(project_details.sow_id, '') " \
-            "AS sow_id,IFNULL(project_details.is_new_project, '') AS is_new_project,IFNULL(project_details.billable, '') " \
-            "AS billable,IFNULL(project_details.utilization, '') " \
-            "AS utilization,SUM(TIME_TO_SEC(timesheet.task_hours))/3600 " \
+            "Project_name,CONCAT(IFNULL(user_details.first_name, ''), " \
+            "' ', IFNULL(user_details.last_name, '')) AS " \
+            "Employee_name,IFNULL(project_details.budget, '') AS " \
+            "budget,IFNULL(project_details.total_hours, '') AS " \
+            "total_hours,IFNULL(project_details.sow_id, '') AS " \
+            "sow_id,IFNULL(project_details.is_new_project, '') AS " \
+            "is_new_project,CASE project_details.billable WHEN 1 " \
+            "THEN 'Y' ELSE 'N' END AS billable,CASE project_details.utilization " \
+            "WHEN 1 THEN 'Y' ELSE 'N' END AS utilization,SUM(timesheet.task_hours) " \
             "AS Hours_logged_for_billable_utilization_for_project," \
-            "SUM(TIME_TO_SEC(timesheet.task_hours))/3600 * IFNULL(project_user_mapping.hourly_rate, '') " \
-            "AS Billing_rate_for_employee,SUM(SUM(TIME_TO_SEC(timesheet.task_hours))/3600) " \
-            "OVER (PARTITION BY project_details.project_id) AS " \
+            "IFNULL(project_user_mapping.hourly_rate, '') AS " \
+            "Hourly_rate_for_employee,SUM(timesheet.task_hours) * " \
+            "IFNULL(project_user_mapping.hourly_rate, '') AS " \
+            "Billing_rate_for_employee,SUM(SUM(timesheet.task_hours)) OVER " \
+            "(PARTITION BY project_details.project_id) AS " \
             "Total_hours_logged_to_project,IFNULL(project_details.start_date, '') " \
-            "AS start_date,IFNULL(project_details.end_date, '') " \
-            "AS end_date,IFNULL(project_details.active, '') AS " \
-            "active FROM project_details JOIN timesheet ON project_details.project_id = timesheet.project_id " \
-            "JOIN project_user_mapping ON timesheet.project_id = project_user_mapping.project_id JOIN user_details " \
-            "ON timesheet.user_id = user_details.user_id WHERE project_details.billable = 1 AND " \
-            "project_details.active = 1 GROUP BY project_details.project_id, user_details.user_id"
+            "AS start_date,IFNULL(project_details.end_date, '') AS " \
+            "end_date,CASE project_details.active WHEN 1 THEN 'Y' ELSE 'N' END " \
+            "AS active FROM project_details JOIN timesheet ON " \
+            "project_details.project_id = timesheet.project_id JOIN user_details " \
+            "ON timesheet.user_id = user_details.user_id JOIN project_user_mapping " \
+            "ON timesheet.user_id = project_user_mapping.user_id AND " \
+            "timesheet.project_id = project_user_mapping.project_id WHERE " \
+            "project_details.billable = 1 AND project_details.active = 1 " \
+            "GROUP BY project_details.project_id, user_details.user_id"
 
     df = pd.read_sql(query, mydb)
     return df

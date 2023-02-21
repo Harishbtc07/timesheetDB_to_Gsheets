@@ -18,13 +18,17 @@ def connect():
     #       "project_user_mapping pum WHERE pd.project_id=pum.project_id AND pum.user_id = ud.user_id AND pum.manager = 1 " \
     #       "ORDER BY pd.project_name;"
 
-    query = "select pd.Project_name ,COALESCE(pd.Sow_id, '') as Sow_id,pd.Total_hours,concat(ud.first_name,' ',ud.last_name) AS " \
-            "Manager,pd.Start_date,pd.End_date," \
-            "COALESCE(pd.project_classification, ''),pd.budget as Budget,pd.billable as Billable,pd.utilization as Utilization," \
-            "COALESCE((SELECT (sum(TIME_TO_SEC(ts.task_hours)))/3600 from timesheet" \
-            " ts where ts.project_id=pd.project_id), '') as utilizedHours " \
-            "from project_details pd , user_details ud, project_user_mapping pum where " \
-            "pd.project_id=pum.project_id and pum.user_id = ud.user_id and pum.manager = 1  ORDER BY pd.project_name"
+    query = "SELECT pd.Project_name, COALESCE(pd.Sow_id, '') AS " \
+            "Sow_id, pd.Total_hours,CONCAT(ud.first_name, ' ', ud.last_name) AS " \
+            "Manager, pd.Start_date, pd.End_date,COALESCE(pd.project_classification, '') " \
+            "AS project_classification, pd.budget AS " \
+            "Budget,CASE pd.billable WHEN 1 THEN 'Y' ELSE 'N' END AS " \
+            "Billable,CASE pd.utilization WHEN 1 THEN 'Y' ELSE 'N' END AS " \
+            "Utilization,COALESCE((SELECT (SUM(TIME_TO_SEC(ts.task_hours)))/3600 " \
+            "FROM timesheet ts WHERE ts.project_id=pd.project_id), '') AS " \
+            "utilizedHours FROM project_details pd, user_details ud, " \
+            "project_user_mapping pum WHERE pd.project_id=pum.project_id AND " \
+            "pum.user_id=ud.user_id AND pum.manager=1 AND pd.active=1 ORDER BY pd.Project_name"
     df = pd.read_sql(query, mydb)
     return df
 
